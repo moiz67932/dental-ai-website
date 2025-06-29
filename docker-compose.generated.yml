@@ -1,0 +1,80 @@
+services:
+  # ------------------------------------------------------------------------ #
+  #  POSTGRES (internal only)                                                #
+  # ------------------------------------------------------------------------ #
+  postgres:
+    image: postgres:16-alpine
+    container_name: website-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=${PG_PASS}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_DB=${PG_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    # 🔥 NO "ports:" line – stays inside the docker network 🔥
+
+  # ------------------------------------------------------------------------ #
+  #  VOICE AGENT                                                             #
+  # ------------------------------------------------------------------------ #
+  dental-voice-agent:
+    build:
+      context: ../dental-agent
+    image: dental-agent:dev
+    container_name: aria-voice-moiz-dental-clinic
+    restart: unless-stopped
+    depends_on: [postgres]
+    command: ["start", "--clinic-id", "32"]
+    # command: ["dev"]
+    environment:
+      - PG_HOST=localhost # ← service-name resolves via Docker DNS
+      - PG_PORT=5432
+      - PG_USER=${PG_USER}
+      - PG_PASS=${PG_PASS}
+      - PG_DB=${PG_DB}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - CLINIC_SLUG=moiz-dental-clinic
+      - CLINIC_NAME=Moiz Dental Clinic
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_FROM_NUMBER=${TWILIO_FROM_NUMBER}
+      - TWILIO_TEMPLATE_SID=${TWILIO_TEMPLATE_SID}
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - GCAL_ID=moiz67932@gmail.com
+      - GCAL_CREDS=calendar_tools/dental-ai-agent.json
+      - TZ=Asia/Karachi
+      - OPEN_HOURS=09:00-17:00
+      - SLOT_MINUTES=30
+      # (…rest of your env-vars stay here …)
+    volumes:
+      - dental_data:/app/data
+      - ../logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ------------------------------------------------------------------------ #
+  #  GRAFANA                                                                 #
+  # ------------------------------------------------------------------------ #
+  grafana:
+    image: grafana/grafana:latest
+    container_name: aria-grafana-moiz-dental-clinic
+    restart: unless-stopped
+    depends_on: [postgres]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3003:3000" # only Grafana needs a host-port
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  pg_data:
+  dental_data:
+  grafana_data:
