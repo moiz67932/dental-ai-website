@@ -47,7 +47,7 @@ const supa = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY // **service-role** key, NOT anon
 );
 
-const PROVISION_URL = process.env.PROVISION_API_URL; // e.g. https://dental-ai--provision-api.up.railway.app/provision
+const PROVISION_URL = process.env.PROVISION_API_URL; //e.g. https://dental-ai--provision-api.up.railway.app/provision
 
 export async function POST(req) {
   const { searchParams } = new URL(req.url);
