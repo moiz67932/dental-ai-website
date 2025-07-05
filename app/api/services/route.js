@@ -37,25 +37,24 @@
 //     return NextResponse.json({ error: "Server error" }, { status: 500 });
 //   }
 // }
-
 // app/api/services/route.js
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
 /* ------------------------------------------------------------
-   1 •  initialise clients (runs once per Lambda / edge-fn warm-start)
+   1 •  initialise clients (executes once per Lambda / edge warm-start)
 ------------------------------------------------------------ */
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  // Needs a *service-role* key so we can bypass RLS
+  // must be the *service-role* key because we bypass RLS
   process.env.SUPABASE_SERVICE_ROLE
 );
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /* ------------------------------------------------------------
-   2 •  API Route – POST /api/services
+   2 •  POST  /api/services
 ------------------------------------------------------------ */
 export async function POST(req) {
   try {
@@ -79,16 +78,19 @@ export async function POST(req) {
       );
     }
 
-    /* ---------- step 1 – embed ---------- */
-    const textForEmbedding = `${name}. ${description} ${price}`;
+    /* ---------- step 1 – create embedding ---------- */
+    const text = `${name}. ${description} ${price}`;
     const {
-      data: [{ embedding }],
+      data: [embedObj],
     } = await openai.embeddings.create({
       model: "text-embedding-3-small",
-      input: [textForEmbedding.replace(/\n/g, " ")],
+      input: [text.replace(/\n/g, " ")],
     });
 
-    /* ---------- step 2 – insert ---------- */
+    // pgvector expects a string literal "[…]" — not a JS array
+    const pgVector = `[${embedObj.embedding.join(",")}]`;
+
+    /* ---------- step 2 – insert row ---------- */
     const { data, error } = await supabase
       .from("dental_services")
       .insert({
@@ -117,7 +119,7 @@ export async function POST(req) {
 }
 
 /* ------------------------------------------------------------
-   3 •  (optional) Make the route Server-only
+   3 •  (optional) make the route server-only
 ------------------------------------------------------------ */
-// export const runtime = "edge";          // ← enable if you’re on Vercel Edge
-// export const dynamic = "force-dynamic"; // ← avoids caching
+// export const runtime  = "edge";          // ← uncomment if you deploy to Vercel Edge
+// export const dynamic  = "force-dynamic"; // ← skip caching entirely
