@@ -47,7 +47,7 @@ import OpenAI from "openai";
    1 •  initialise clients (runs once per Lambda / edge-fn warm-start)
 ------------------------------------------------------------ */
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_URL,
   // Needs a *service-role* key so we can bypass RLS
   process.env.SUPABASE_SERVICE_ROLE
 );
