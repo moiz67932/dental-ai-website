@@ -99,7 +99,7 @@ export async function POST(req) {
         insurance,
         duration: Number(duration),
         price: Number(price),
-        embedding, // ← pgvector(1536)
+        embedding: pgVector, // ← pgvector(1536)
       })
       .select()
       .single();
